@@ -106,7 +106,7 @@ export async function zapNostr(req, res) {
     .then( success => {
         console.log('Enviado!')
         console.log('preimage: ', success.preimage)
-        return res.status(200).send({'message': success.preimage});
+        return res.status(200).send({'message': 'Preimage: '+success.preimage});
     })
     .catch( error => {
         console.log('Não Enviado!')
