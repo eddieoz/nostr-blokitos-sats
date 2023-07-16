@@ -23,29 +23,28 @@ export async function zapNostr(req, res) {
         return res.status(400).send({'message': 'All fields are required'})
     }
     
-    // Use Nostr Wallet Connect (getAlby is a good option)
+    // Use Nostr Wallet Connect (getAlby)
     const nostrWeblnProvider = new webln.NostrWebLNProvider({ nostrWalletConnectUrl })
-    const nostrPrivateKey = nostrWeblnProvider.secret;
+    const srcPrivateKey = nostrWeblnProvider.secret;
     
     // Establish NostrProvider
     const nostrProvider = {
-        getPublicKey: () => Promise.resolve(getPublicKey(nostrPrivateKey)),
-        signEvent: (event) => Promise.resolve(finishEvent(event, nostrPrivateKey)),
+        getPublicKey: () => Promise.resolve(getPublicKey(srcPrivateKey)),
+        signEvent: (event) => Promise.resolve(finishEvent(event, srcPrivateKey)),
     }
     
-    let nostrPublickey = ''
+    let dstNostrPubkey = ''
     
     // Check if it is npub, otherwise consider it as nip-05
     if (destination.match('npub')){
         let {type, data} = nip19.decode(destination)
-        nostrPublickey = data
+        dstNostrPubkey = data
     } else {
         let nostrProfile = await nip05.queryProfile(destination)
-        nostrPublickey = nostrProfile.pubkey
+        dstNostrPubkey = nostrProfile.pubkey
     }
-    console.log(nostrPublickey)
     
-    if (!nostrPublickey) {
+    if (!dstNostrPubkey) {
         return res.status(400).send({'message': 'No nostr pubkey available'})
     }
     
@@ -61,7 +60,8 @@ export async function zapNostr(req, res) {
     await relay.connect()
     
     // Retrieve Nostr profile
-    let events = await relay.list([{kinds: [0], authors: [nostrPublickey]}])
+    let events = await relay.list([{kinds: [0], authors: [dstNostrPubkey]}])
+    
     console.log(events)
     
     await relay.close()
@@ -88,13 +88,12 @@ export async function zapNostr(req, res) {
         return res.status(400).send({'message': 'Invalid LN Address'});
     }
     
-    ln.nostrPubkey = nostrPublickey
+    ln.nostrPubkey = dstNostrPubkey
     
     if (!ln.nostrPubkey) {
         return res.status(400).send({'message': 'No nostr pubkey available'})
     }
     
-    // Prepare zap
     const zapArgs = {
         satoshi: satoshi,
         comment: "Morning Crypto: Blokitos <> Sats",
@@ -105,13 +104,12 @@ export async function zapNostr(req, res) {
     const response = await ln.zap(zapArgs, {nostr: nostrProvider})
     .then( success => {
         console.log('Enviado!')
-        console.log('preimage: ', success.preimage)
-        return res.status(200).send({'message': {'Preimage': success.preimage}});
+        console.log(new Date().toISOString(), 'amount:', satoshi, 'preimage: ', success.preimage)
+        return res.status(200).send({'message': {'preimage': success.preimage}});
     })
     .catch( error => {
         console.log('Não Enviado!')
         console.log('erro: ', error)
-
         return res.status(400).send({'message': error});
     })    
     nostrWeblnProvider.close();
