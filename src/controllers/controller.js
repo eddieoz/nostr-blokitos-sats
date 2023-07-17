@@ -38,15 +38,24 @@ export async function zapNostr(req, res) {
 
     // Check if it is npub, otherwise consider it as nip-05
     if (destination.match('npub')) {
-        let { type, data } = nip19.decode(destination)
-        dstNostrPubkey = data
-    } else {
-        let nostrProfile = await nip05.queryProfile(destination)
-        if (nostrProfile !== null && nostrProfile.hasOwnProperty('pubkey')) {
-            dstNostrPubkey = nostrProfile.pubkey;
-        } else {
+        try {
+            let { type, data } = nip19.decode(destination)
+            dstNostrPubkey = data
+        } catch {
             return res.status(200).send('Please input NIP05 or Nostr npub... pubkey')
         }
+        
+    } else {
+        try {
+            let nostrProfile = await nip05.queryProfile(destination)
+            if (nostrProfile !== null && nostrProfile.hasOwnProperty('pubkey')) {
+                dstNostrPubkey = nostrProfile.pubkey;
+            } else {
+                return res.status(200).send('Please input NIP05 or Nostr npub... pubkey')
+            }
+        } catch {
+            return res.status(200).send('Please input NIP05 or Nostr npub... pubkey')
+        }    
     }
 
     if (!dstNostrPubkey) {
@@ -108,17 +117,21 @@ export async function zapNostr(req, res) {
         relays: ["wss://relay.damus.io"],
     }
 
-    // Send zap
+    // Return msg to bot because of timeout (botrix has a fixed pretty small timeout) and send zap.
+    // Everything is ready to send zap
+    res.status(200).send(`sending ${sats} sats to ${destination}`);
     const response = await ln.zap(zapArgs, { nostr: nostrProvider })
         .then(success => {
             console.log('Enviado!')
             console.log(new Date().toISOString(), 'amount:', sats, 'to', destination, 'preimage:', success.preimage)
-            return res.status(200).send(`${sats} sats sent to ${destination}, preimage: ${success.preimage}`);
+            nostrWeblnProvider.close();
+            return;   
         })
         .catch(error => {
             console.log('Não Enviado!')
             console.log('err: ', error)
-            return res.status(200).send(`Error: ${error}`);
+            nostrWeblnProvider.close();
+            return;
         })
-    nostrWeblnProvider.close();
+    
 }
