@@ -41,7 +41,12 @@ export async function zapNostr(req, res) {
         dstNostrPubkey = data
     } else {
         let nostrProfile = await nip05.queryProfile(destination)
-        dstNostrPubkey = nostrProfile.pubkey
+        if (!nostrProfile.pubkey) {
+            return res.status(400).send({ 'message': 'No nostr pubkey available' })
+        } else {
+            dstNostrPubkey = nostrProfile.pubkey
+        }
+        
     }
 
     if (!dstNostrPubkey) {
