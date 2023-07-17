@@ -7,6 +7,7 @@ import 'dotenv/config';
 
 globalThis.crypto = crypto;
 
+// from .env
 const nostrWalletConnectUrl = process.env.NWC_URL;
 
 if (!nostrWalletConnectUrl) {
@@ -79,11 +80,11 @@ export async function zapNostr(req, res) {
         return res.status(200).send('Lightning Address not found in this Nostr Profile')
     }
 
+    // Validate LN Address
     const ln = new LightningAddress(lnAddress, {
         webln: nostrWeblnProvider,
     });
 
-    // LN Address info query
     await ln.fetch()
         .catch(error => {
             return res.status(200).send('Invalid LN Address')
@@ -99,13 +100,15 @@ export async function zapNostr(req, res) {
         return res.status(200).send('Nostr pubkey not found')
     }
 
+    
+    // Prepare zap
     const zapArgs = {
         satoshi: sats,
         comment: "Morning Crypto: Blokitos <> Sats",
         relays: ["wss://relay.damus.io"],
     }
 
-    // Generates a zap invoice
+    // Send zap
     const response = await ln.zap(zapArgs, { nostr: nostrProvider })
         .then(success => {
             console.log('Enviado!')
