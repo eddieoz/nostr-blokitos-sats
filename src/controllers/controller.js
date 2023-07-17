@@ -44,12 +44,12 @@ export async function zapNostr(req, res) {
         if (nostrProfile !== null && nostrProfile.hasOwnProperty('pubkey')) {
             dstNostrPubkey = nostrProfile.pubkey;
         } else {
-            return res.status(200).send('No nostr pubkey available')
+            return res.status(200).send('Please input NIP05 or Nostr npub... pubkey')
         }
     }
 
     if (!dstNostrPubkey) {
-        return res.status(200).send('No nostr pubkey available')
+        return res.status(200).send('Please input NIP05 or Nostr npub... pubkey')
     }
 
     // Connect relay
@@ -76,7 +76,7 @@ export async function zapNostr(req, res) {
     const lnAddress = content.lud16.toString().trim()
 
     if (!lnAddress) {
-        return res.status(200).send('No Lightning Address in this Nostr Profile')
+        return res.status(200).send('Lightning Address not found in this Nostr Profile')
     }
 
     const ln = new LightningAddress(lnAddress, {
@@ -86,8 +86,9 @@ export async function zapNostr(req, res) {
     // LN Address info query
     await ln.fetch()
         .catch(error => {
-            return res.status(200).send('LN Address not found')
+            return res.status(200).send('Invalid LN Address')
         });
+
     if (!ln.lnurlpData) {
         return res.status(200).send('Invalid LN Address');
     }
@@ -95,7 +96,7 @@ export async function zapNostr(req, res) {
     ln.nostrPubkey = dstNostrPubkey
 
     if (!ln.nostrPubkey) {
-        return res.status(200).send('No nostr pubkey available')
+        return res.status(200).send('Nostr pubkey not found')
     }
 
     const zapArgs = {
