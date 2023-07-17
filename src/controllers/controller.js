@@ -74,7 +74,7 @@ export async function zapNostr(req, res) {
 
     // Get LN Address from Nostr Profile
     let content = JSON.parse(events[0].content)
-    const lnAddress = content.lud16
+    const lnAddress = content.lud16.toString().trim()
 
     if (!lnAddress) {
         return res.status(400).send({ 'message': 'No Lightning Address in this Nostr Profile' })
