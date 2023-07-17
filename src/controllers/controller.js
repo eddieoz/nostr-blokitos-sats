@@ -16,10 +16,10 @@ if (!nostrWalletConnectUrl) {
 // transfer sats to nostr pubkey
 export async function zapNostr(req, res) {
 
-    let destination = req.query.profile
-    let satoshi = req.query.value
+    let destination = req.query.profile.toString().trim()
+    let sats = req.query.value.toString().trim()
 
-    if (!destination || !satoshi) {
+    if (!destination || !sats) {
         return res.status(400).send({ 'message': 'All fields are required' })
     }
 
@@ -44,22 +44,21 @@ export async function zapNostr(req, res) {
         if (nostrProfile !== null && nostrProfile.hasOwnProperty('pubkey')) {
             dstNostrPubkey = nostrProfile.pubkey;
         } else {
-            return res.status(400).send({ 'message': 'No nostr pubkey available' })
+            return res.status(200).send('No nostr pubkey available')
         }
-        
     }
 
     if (!dstNostrPubkey) {
-        return res.status(400).send({ 'message': 'No nostr pubkey available' })
+        return res.status(200).send('No nostr pubkey available')
     }
 
     // Connect relay
     const relay = relayInit('wss://relay.damus.io')
     relay.on('connect', () => {
-        console.log(`connected to ${relay.url}`)
+        console.log('connected to', relay.url)
     })
     relay.on('error', () => {
-        console.log(`failed to connect to ${relay.url}`)
+        console.log('failed to connect to', relay.url)
     })
 
     await relay.connect()
@@ -77,7 +76,7 @@ export async function zapNostr(req, res) {
     const lnAddress = content.lud16.toString().trim()
 
     if (!lnAddress) {
-        return res.status(400).send({ 'message': 'No Lightning Address in this Nostr Profile' })
+        return res.status(200).send('No Lightning Address in this Nostr Profile')
     }
 
     const ln = new LightningAddress(lnAddress, {
@@ -87,20 +86,20 @@ export async function zapNostr(req, res) {
     // LN Address info query
     await ln.fetch()
         .catch(error => {
-            return res.status(400).send({ 'message': 'LN Address not found' })
+            return res.status(200).send('LN Address not found')
         });
     if (!ln.lnurlpData) {
-        return res.status(400).send({ 'message': 'Invalid LN Address' });
+        return res.status(200).send('Invalid LN Address');
     }
 
     ln.nostrPubkey = dstNostrPubkey
 
     if (!ln.nostrPubkey) {
-        return res.status(400).send({ 'message': 'No nostr pubkey available' })
+        return res.status(200).send('No nostr pubkey available')
     }
 
     const zapArgs = {
-        satoshi: satoshi,
+        satoshi: sats,
         comment: "Morning Crypto: Blokitos <> Sats",
         relays: ["wss://relay.damus.io"],
     }
@@ -109,13 +108,13 @@ export async function zapNostr(req, res) {
     const response = await ln.zap(zapArgs, { nostr: nostrProvider })
         .then(success => {
             console.log('Enviado!')
-            console.log(new Date().toISOString(), 'amount:', satoshi, 'preimage: ', success.preimage)
-            return res.status(200).send({ 'message': { 'preimage': success.preimage } });
+            console.log(new Date().toISOString(), 'amount:', sats, 'to', destination, 'preimage:', success.preimage)
+            return res.status(200).send(`${sats} sats sent to ${destination}, preimage: ${success.preimage}`);
         })
         .catch(error => {
             console.log('Não Enviado!')
-            console.log('erro: ', error)
-            return res.status(400).send({ 'message': error });
+            console.log('err: ', error)
+            return res.status(200).send(`Error: ${error}`);
         })
     nostrWeblnProvider.close();
 }
