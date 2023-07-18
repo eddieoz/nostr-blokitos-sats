@@ -21,8 +21,13 @@ export async function zapNostr(req, res) {
     let sats = req.query.value.toString().trim()
 
     if (!destination || !sats) {
-        return res.status(400).send({ 'message': 'All fields are required' })
+        return res.status(200).send({ 'message': 'All fields are required' })
     }
+
+    if (sats <= 0) {
+        return res.status(200).send({ 'message': 'amount cant be <= 0' })
+    }
+
 
     // Use Nostr Wallet Connect (getAlby)
     const nostrWeblnProvider = new webln.NostrWebLNProvider({ nostrWalletConnectUrl })
@@ -71,23 +76,35 @@ export async function zapNostr(req, res) {
         console.log('failed to connect to', relay.url)
     })
 
-    await relay.connect()
+    let events = []
+    try{
+        await relay.connect()
 
-    // Retrieve Nostr profile
-    let events = await relay.list([{ kinds: [0], authors: [dstNostrPubkey] }])
+        // Retrieve Nostr profile
+        events = await relay.list([{ kinds: [0], authors: [dstNostrPubkey] }])
+    
+        console.log(events)
+    
+        await relay.close()
+    } catch {
+        return res.status(200).send('Relay unavailable now. Try again later.')
+    }
+    
+    let content = '';
+    if (events[0].hasOwnProperty('content')){
+        // Get LN Address from Nostr Profile
+        content = JSON.parse(events[0].content)
+    } else {
+        return res.status(200).send('Lightning Address not found in this Nostr Profile.')
+    }
 
-    console.log(events)
-
-    await relay.close()
-
-
-    // Get LN Address from Nostr Profile
-    let content = JSON.parse(events[0].content)
-    const lnAddress = content.lud16.toString().trim()
-
-    if (!lnAddress) {
+    let lnAddress = '';
+    if (content.hasOwnProperty('lud16')){
+        lnAddress = content.lud16.toString().trim()
+    } else {
         return res.status(200).send('Lightning Address not found in this Nostr Profile')
     }
+    
 
     // Validate LN Address
     const ln = new LightningAddress(lnAddress, {
@@ -114,7 +131,7 @@ export async function zapNostr(req, res) {
     const zapArgs = {
         satoshi: sats,
         comment: "Morning Crypto: Blokitos <> Sats",
-        relays: ["wss://relay.damus.io"],
+        relays: ["wss://relay.damus.io", "wss://relay.snort.social", "wss://nostr.mom", "wss://nos.lol", "wss://nostr.zbd.gg", "wss://nostr.rocks", "wss://nostr.bitcoiner.social", "wss://nostr-pub.semisol.dev", "wss://relay.nostrplebs.com/", "wss://eden.nostr.land", "wss://nostr.mutinywallet.com"],
     }
 
     // Return msg to bot because of timeout (botrix has a fixed pretty small timeout) and send zap.
