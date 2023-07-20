@@ -21,6 +21,7 @@ export async function zapNostr(req, res) {
 
     let destination = req.query.profile.toString().trim()
     let sats = req.query.value.toString().trim()
+    let message = ''
 
     if (!destination || !sats) {
         return res.status(200).send({ 'message': 'All fields are required' })
@@ -42,14 +43,14 @@ export async function zapNostr(req, res) {
     }
 
     let dstNostrPubkey = ''
-
+    message = 'Please input NIP05 or Nostr npub... pubkey'
     // Check if it is npub, otherwise consider it as nip-05
     if (destination.match('npub')) {
         try {
             let { type, data } = nip19.decode(destination)
             dstNostrPubkey = data
         } catch {
-            return res.status(200).send('Please input NIP05 or Nostr npub... pubkey')
+            return res.status(200).send(message)
         }
     } else {
         try {
@@ -57,18 +58,18 @@ export async function zapNostr(req, res) {
             if (nostrProfile !== null && nostrProfile.hasOwnProperty('pubkey')) {
                 dstNostrPubkey = nostrProfile.pubkey;
             } else {
-                return res.status(200).send('Please input NIP05 or Nostr npub... pubkey')
+                return res.status(200).send(message)
             }
         } catch {
-            return res.status(200).send('Please input NIP05 or Nostr npub... pubkey')
+            return res.status(200).send(message)
         }
     }
     if (!dstNostrPubkey) {
-        return res.status(200).send('Please input NIP05 or Nostr npub... pubkey')
+        return res.status(200).send(message)
     }
+    message = ''
 
     // Connect relay
-
     const pool = new SimplePool()
     let relays = ['wss://nos.lol', 'wss://relay.damus.io', 'wss://relay.snort.social', 'wss://nostr.zbd.gg', 'wss://nostr.rocks', 'wss://relay.nostrplebs.com', 'wss://nostr.bitcoiner.social']
 
@@ -79,11 +80,15 @@ export async function zapNostr(req, res) {
 
         console.log(events)
     } catch {
-        return res.status(200).send('Relay unavailable now. Try again later.')
+        message = `Relay unavailable now. Try again later.`
+        sendMsg(message, nip19.npubEncode(dstNostrPubkey))
+        return res.status(200).send(message)
     }
 
     if (!events) {
-        return res.status(200).send('Profile unavailable now. Try again later.')
+        message = `Profile unavailable now. Try again later.`
+        sendMsg(message, nip19.npubEncode(dstNostrPubkey))
+        return res.status(200).send(message)
     }
 
     let content = '';
@@ -91,14 +96,18 @@ export async function zapNostr(req, res) {
         // Get LN Address from Nostr Profile
         content = JSON.parse(events[0].content)
     } else {
-        return res.status(200).send('Lightning Address not found in this Nostr Profile.')
+        message = `Lightning Address (LN Address) not found in this Nostr Profile.`
+        sendMsg(message, nip19.npubEncode(dstNostrPubkey))
+        return res.status(200).send(message)
     }
 
     let lnAddress = '';
     if (content.hasOwnProperty('lud16')) {
         lnAddress = content.lud16.toString().trim()
     } else {
-        return res.status(200).send('Lightning Address not found in this Nostr Profile')
+        message = 'Lightning Address not found in this Nostr Profile'
+        sendMsg(message, nip19.npubEncode(dstNostrPubkey))
+        return res.status(200).send(message)
     }
 
 
@@ -109,24 +118,26 @@ export async function zapNostr(req, res) {
 
     await ln.fetch()
         .catch(error => {
-            return res.status(200).send('Invalid LN Address')
+            message = 'Invalid LN Address'
+            sendMsg(message, nip19.npubEncode(dstNostrPubkey))
+            return res.status(200).send(message)
         });
 
     if (!ln.lnurlpData) {
-        return res.status(200).send('Invalid LN Address');
+        message = 'Invalid LN Address'
+        sendMsg(message, nip19.npubEncode(dstNostrPubkey))
+        return res.status(200).send(message);
     }
-
+    
     ln.nostrPubkey = dstNostrPubkey
 
     if (!ln.nostrPubkey) {
         return res.status(200).send('Nostr pubkey not found')
     }
 
-    let message = '';
     // Return msg to bot before because of timeout (botrix has a fixed pretty small timeout) and send zap.
     // Everything is ready to send zap
-    res.status(200).send(`sending ${sats} sats to ${destination}`);
-
+    res.status(200).send(`Check the DM of ${destination} for updates`);
     const response = await ln.zap(zapArgs(sats), { nostr: nostrProvider })
         .then(success => {
             console.log('Enviado!')
