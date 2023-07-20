@@ -20,6 +20,8 @@ export async function zapNostr(req, res) {
     let destination = req.query.profile.toString().trim()
     let sats = req.query.value.toString().trim()
 
+    console.log(destination)
+
     if (!destination || !sats) {
         return res.status(200).send({ 'message': 'All fields are required' })
     }
@@ -49,10 +51,10 @@ export async function zapNostr(req, res) {
         } catch {
             return res.status(200).send('Please input NIP05 or Nostr npub... pubkey')
         }
-
     } else {
         try {
             let nostrProfile = await nip05.queryProfile(destination)
+            console.log(nostrProfile)
             if (nostrProfile !== null && nostrProfile.hasOwnProperty('pubkey')) {
                 dstNostrPubkey = nostrProfile.pubkey;
             } else {
@@ -62,7 +64,6 @@ export async function zapNostr(req, res) {
             return res.status(200).send('Please input NIP05 or Nostr npub... pubkey')
         }
     }
-
     if (!dstNostrPubkey) {
         return res.status(200).send('Please input NIP05 or Nostr npub... pubkey')
     }
@@ -132,7 +133,7 @@ export async function zapNostr(req, res) {
         kind: 1
     }
 
-    // Return msg to bot because of timeout (botrix has a fixed pretty small timeout) and send zap.
+    // Return msg to bot before because of timeout (botrix has a fixed pretty small timeout) and send zap.
     // Everything is ready to send zap
     res.status(200).send(`sending ${sats} sats to ${destination}`);
 

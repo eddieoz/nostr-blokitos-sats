@@ -7,6 +7,10 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "nodemon ./server.js --exec babel-node --presets babel-preset-env"
   },
+  "engines" : { 
+    "npm" : ">=9.5.1",
+    "node" : ">=18.16.1"
+  },
   "type": "module",
   "author": "EddieOz",
   "license": "MIT",
