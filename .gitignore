@@ -3,3 +3,5 @@ yarn.lock
 *.log
 .env
 launch.json
+app.js
+generate_keys.js
