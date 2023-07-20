@@ -4,6 +4,7 @@ import 'websocket-polyfill';
 import * as crypto from "crypto";
 import { finishEvent, getPublicKey, nip05, nip19, relayInit, SimplePool } from "nostr-tools";
 import 'dotenv/config';
+import { sendMsg } from './sendMsg.js'
 
 globalThis.crypto = crypto;
 
@@ -130,6 +131,7 @@ export async function zapNostr(req, res) {
         kind: 1
     }
 
+    let message = '';
     // Return msg to bot before because of timeout (botrix has a fixed pretty small timeout) and send zap.
     // Everything is ready to send zap
     res.status(200).send(`sending ${sats} sats to ${destination}`);
@@ -139,12 +141,20 @@ export async function zapNostr(req, res) {
             .then(success => {
                 console.log('Enviado!')
                 console.log(new Date().toISOString(), 'amount:', sats, 'to', destination, 'preimage:', success.preimage)
+                
+                message = `Hello!! You received ${sats} sats from Morning Crypto\nYour receipt is ${success.preimage}`
+                sendMsg(message, nip19.npubEncode(dstNostrPubkey))
+                
                 nostrWeblnProvider.close();
                 return;
             })
             .catch(error => {
                 console.log('Não Enviado!')
                 console.log('err: ', error)
+
+                message = `Hey!! There was an error sending ${sats} sats :(`
+                sendMsg(message, nip19.npubEncode(dstNostrPubkey))
+                
                 nostrWeblnProvider.close();
                 return;
             })
