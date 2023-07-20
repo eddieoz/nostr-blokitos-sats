@@ -1,4 +1,4 @@
-import { relayInit, getEventHash, getSignature, getPublicKey, nip04, nip19, SimplePool} from "nostr-tools";
+import { relayInit, getEventHash, getSignature, generatePrivateKey, getPublicKey, nip04, nip19, SimplePool} from "nostr-tools";
 import 'dotenv/config';
 import * as crypto from "crypto";
 import 'websocket-polyfill';
