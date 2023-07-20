@@ -49,6 +49,7 @@ export async function zapNostr(req, res) {
         try {
             let { type, data } = nip19.decode(destination)
             dstNostrPubkey = data
+            res.status(200).send(`Yes master! Check the DM of [${destination.substr(0,6)}...${destination.substr(-4)}] for updates`);
         } catch {
             return res.status(200).send(message)
         }
@@ -57,6 +58,7 @@ export async function zapNostr(req, res) {
             let nostrProfile = await nip05.queryProfile(destination)
             if (nostrProfile !== null && nostrProfile.hasOwnProperty('pubkey')) {
                 dstNostrPubkey = nostrProfile.pubkey;
+                res.status(200).send(`Yes master! Check the DM of ${destination} for updates`);
             } else {
                 return res.status(200).send(message)
             }
@@ -67,8 +69,6 @@ export async function zapNostr(req, res) {
     if (!dstNostrPubkey) {
         return res.status(200).send(message)
     }
-
-    res.status(200).send(`Yes master! Check the DM of ${destination} for updates`);
 
     message = ''
 
