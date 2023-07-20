@@ -5,6 +5,7 @@ import * as crypto from "crypto";
 import { finishEvent, getPublicKey, nip05, nip19, relayInit, SimplePool } from "nostr-tools";
 import 'dotenv/config';
 import { sendMsg } from './sendMsg.js'
+import { zapArgs } from "../models/models.js";
 
 globalThis.crypto = crypto;
 
@@ -77,7 +78,6 @@ export async function zapNostr(req, res) {
         events = await pool.list(relays, [{ kinds: [0], authors: [dstNostrPubkey] }])
 
         console.log(events)
-
     } catch {
         return res.status(200).send('Relay unavailable now. Try again later.')
     }
@@ -122,45 +122,30 @@ export async function zapNostr(req, res) {
         return res.status(200).send('Nostr pubkey not found')
     }
 
-
-    // Prepare zap
-    const zapArgs = {
-        satoshi: sats,
-        comment: `Morning Crypto: ${sats} blokitos <> ${sats} sats`,
-        relays: ["wss://relay.damus.io", "wss://relay.snort.social", "wss://nostr.mom", "wss://nos.lol", "wss://nostr.zbd.gg", "wss://nostr.rocks", "wss://nostr.bitcoiner.social", "wss://nostr-pub.semisol.dev", "wss://relay.nostrplebs.com/", "wss://eden.nostr.land", "wss://nostr.mutinywallet.com"],
-        kind: 1
-    }
-
     let message = '';
     // Return msg to bot before because of timeout (botrix has a fixed pretty small timeout) and send zap.
     // Everything is ready to send zap
     res.status(200).send(`sending ${sats} sats to ${destination}`);
 
-    try {
-        const response = await ln.zap(zapArgs, { nostr: nostrProvider })
-            .then(success => {
-                console.log('Enviado!')
-                console.log(new Date().toISOString(), 'amount:', sats, 'to', destination, 'preimage:', success.preimage)
-                
-                message = `Hello!! You received ${sats} sats from Morning Crypto\nYour receipt is ${success.preimage}`
-                sendMsg(message, nip19.npubEncode(dstNostrPubkey))
-                
-                nostrWeblnProvider.close();
-                return;
-            })
-            .catch(error => {
-                console.log('Não Enviado!')
-                console.log('err: ', error)
+    const response = await ln.zap(zapArgs(sats), { nostr: nostrProvider })
+        .then(success => {
+            console.log('Enviado!')
+            console.log(new Date().toISOString(), 'amount:', sats, 'to', destination, 'preimage:', success.preimage)
+            
+            message = `Hello!! You received ${sats} sats from Morning Crypto\n\nYour receipt is ${success.preimage}`
+            sendMsg(message, nip19.npubEncode(dstNostrPubkey))
+            
+            nostrWeblnProvider.close();
+            return;
+        })
+        .catch(error => {
+            console.log('Não Enviado!')
+            console.log('err: ', error)
 
-                message = `Hey!! There was an error sending ${sats} sats :(`
-                sendMsg(message, nip19.npubEncode(dstNostrPubkey))
-                
-                nostrWeblnProvider.close();
-                return;
-            })
-
-    } catch {
-        return res.status(200).send('Error sending sats');
-    }
-
+            message = `Hey!! There was an error sending ${sats} sats :(`
+            sendMsg(message, nip19.npubEncode(dstNostrPubkey))
+            
+            nostrWeblnProvider.close();
+            return;
+        })
 }

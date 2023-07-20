@@ -2,6 +2,7 @@ import { relayInit, getEventHash, getSignature, generatePrivateKey, getPublicKey
 import 'dotenv/config';
 import * as crypto from "crypto";
 import 'websocket-polyfill';
+import { encMessageEvent } from "../models/models.js";
 
 globalThis.crypto = crypto;
 let nostrPK, nostrSK;
@@ -19,15 +20,10 @@ export async function sendMsg(message, dstPubkey){
     let pubkey = nip19.decode(dstPubkey).data
     
     let encodedMessage = await nip04.encrypt(nostrSK, pubkey, message)
-
-    let event = {
-        kind: 4,
-        pubkey: nostrPK,
-        tags: [['p', pubkey]],
-        content: encodedMessage,
-        created_at: Math.floor(Date.now() / 1000),
-    }
     
+    let event = await encMessageEvent(nostrPK, pubkey, encodedMessage)
+    console.log(event)
+
     event.id = getEventHash(event);
     event.sig = getSignature(event, nostrSK);
 
