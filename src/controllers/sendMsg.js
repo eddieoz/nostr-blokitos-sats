@@ -11,8 +11,8 @@ if (process.env.NOSTR_SK){
     nostrSK = await nip19.decode(process.env.NOSTR_SK).data;
     nostrPK = getPublicKey(nostrSK);    
 } else {
-    nostrSK = generatePrivateKey()
-    nostrPK = getPublicKey(sk)
+    nostrSK = generatePrivateKey();
+    nostrPK = getPublicKey(nostrSK);
 }
 
 export async function sendMsg(message, dstPubkey){
