@@ -24,11 +24,11 @@ export async function zapNostr(req, res) {
     let message = ''
 
     if (!destination || !sats) {
-        return res.status(200).send({ 'message': 'All fields are required' })
+        return res.status(200).send('All fields are required')
     }
 
     if (sats <= 0) {
-        return res.status(200).send({ 'message': 'amount cant be <= 0' })
+        return res.status(200).send('amount cant be <= 0')
     }
 
 
@@ -67,6 +67,9 @@ export async function zapNostr(req, res) {
     if (!dstNostrPubkey) {
         return res.status(200).send(message)
     }
+
+    res.status(200).send(`Yes master! Check the DM of ${destination} for updates`);
+
     message = ''
 
     // Connect relay
@@ -82,13 +85,13 @@ export async function zapNostr(req, res) {
     } catch {
         message = `Relay unavailable now. Try again later.`
         sendMsg(message, nip19.npubEncode(dstNostrPubkey))
-        return res.status(200).send(message)
+        return 
     }
 
     if (!events) {
         message = `Profile unavailable now. Try again later.`
         sendMsg(message, nip19.npubEncode(dstNostrPubkey))
-        return res.status(200).send(message)
+        return 
     }
 
     let content = '';
@@ -98,7 +101,7 @@ export async function zapNostr(req, res) {
     } else {
         message = `Lightning Address (LN Address) not found in this Nostr Profile.`
         sendMsg(message, nip19.npubEncode(dstNostrPubkey))
-        return res.status(200).send(message)
+        return 
     }
 
     let lnAddress = '';
@@ -107,7 +110,7 @@ export async function zapNostr(req, res) {
     } else {
         message = 'Lightning Address not found in this Nostr Profile'
         sendMsg(message, nip19.npubEncode(dstNostrPubkey))
-        return res.status(200).send(message)
+        return 
     }
 
 
@@ -120,24 +123,24 @@ export async function zapNostr(req, res) {
         .catch(error => {
             message = 'Invalid LN Address'
             sendMsg(message, nip19.npubEncode(dstNostrPubkey))
-            return res.status(200).send(message)
+            return 
         });
 
     if (!ln.lnurlpData) {
         message = 'Invalid LN Address'
         sendMsg(message, nip19.npubEncode(dstNostrPubkey))
-        return res.status(200).send(message);
+        return 
     }
     
     ln.nostrPubkey = dstNostrPubkey
 
     if (!ln.nostrPubkey) {
-        return res.status(200).send('Nostr pubkey not found')
+        message = 'Nostr pubkey not found'
+        sendMsg(message, nip19.npubEncode(dstNostrPubkey))
+        return 
     }
 
-    // Return msg to bot before because of timeout (botrix has a fixed pretty small timeout) and send zap.
     // Everything is ready to send zap
-    res.status(200).send(`Check the DM of ${destination} for updates`);
     const response = await ln.zap(zapArgs(sats), { nostr: nostrProvider })
         .then(success => {
             console.log('Enviado!')
