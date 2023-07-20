@@ -20,8 +20,6 @@ export async function zapNostr(req, res) {
     let destination = req.query.profile.toString().trim()
     let sats = req.query.value.toString().trim()
 
-    console.log(destination)
-
     if (!destination || !sats) {
         return res.status(200).send({ 'message': 'All fields are required' })
     }
@@ -54,7 +52,6 @@ export async function zapNostr(req, res) {
     } else {
         try {
             let nostrProfile = await nip05.queryProfile(destination)
-            console.log(nostrProfile)
             if (nostrProfile !== null && nostrProfile.hasOwnProperty('pubkey')) {
                 dstNostrPubkey = nostrProfile.pubkey;
             } else {
