@@ -19,9 +19,14 @@ if (!nostrWalletConnectUrl) {
 // transfer sats to nostr pubkey
 export async function zapNostr(req, res) {
 
+    let apiKey = req.query.apikey.toString().trim()
     let destination = req.query.profile.toString().trim()
     let sats = req.query.value.toString().trim()
     let message = ''
+
+    if (apiKey != process.env.API_KEY){
+        return res.status(200).send('api key needed')
+    }
 
     if (!destination || !sats) {
         return res.status(200).send('All fields are required')
@@ -80,7 +85,6 @@ export async function zapNostr(req, res) {
     try {
         // Retrieve Nostr profile
         events = await pool.list(relays, [{ kinds: [0], authors: [dstNostrPubkey] }])
-
         console.log(events)
     } catch {
         message = `Relay unavailable now. Try again later.`
@@ -94,9 +98,9 @@ export async function zapNostr(req, res) {
         return 
     }
 
+    // Get LN Address from Nostr Profile
     let content = '';
     if (events && events[0].hasOwnProperty('content')) {
-        // Get LN Address from Nostr Profile
         content = JSON.parse(events[0].content)
     } else {
         message = `Lightning Address (LN Address) not found in this Nostr Profile.`
@@ -108,11 +112,10 @@ export async function zapNostr(req, res) {
     if (content.hasOwnProperty('lud16')) {
         lnAddress = content.lud16.toString().trim()
     } else {
-        message = 'Lightning Address not found in this Nostr Profile'
+        message = 'Lightning Address (LN Address) not found in this Nostr Profile.'
         sendMsg(message, nip19.npubEncode(dstNostrPubkey))
         return 
     }
-
 
     // Validate LN Address
     const ln = new LightningAddress(lnAddress, {
@@ -120,11 +123,11 @@ export async function zapNostr(req, res) {
     });
 
     await ln.fetch()
-        .catch(error => {
-            message = 'Invalid LN Address'
-            sendMsg(message, nip19.npubEncode(dstNostrPubkey))
-            return 
-        });
+    .catch(error => {
+        message = 'Invalid LN Address'
+        sendMsg(message, nip19.npubEncode(dstNostrPubkey))
+        return 
+    });
 
     if (!ln.lnurlpData) {
         message = 'Invalid LN Address'
@@ -133,7 +136,6 @@ export async function zapNostr(req, res) {
     }
     
     ln.nostrPubkey = dstNostrPubkey
-
     if (!ln.nostrPubkey) {
         message = 'Nostr pubkey not found'
         sendMsg(message, nip19.npubEncode(dstNostrPubkey))
