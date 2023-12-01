@@ -5,16 +5,17 @@
   "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon ./server.js --exec babel-node --presets babel-preset-env"
+    "start": "node ./server.js"
   },
-  "engines" : { 
-    "npm" : ">=9.5.1",
-    "node" : ">=18.16.1"
+  "engines": {
+    "npm": ">=9.5.1",
+    "node": ">=18.16.1"
   },
   "type": "module",
   "author": "EddieOz",
   "license": "MIT",
   "dependencies": {
+    "@truffle/hdwallet-provider": "^2.1.15",
     "alby-js-sdk": "^2.1.0",
     "alby-tools": "^3.2.0",
     "body-parser": "^1.20.2",
@@ -22,6 +23,8 @@
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "nostr-tools": "^1.12.1",
+    "web": "^0.0.2",
+    "web3": "^4.2.2",
     "websocket-polyfill": "^0.0.3"
   },
   "devDependencies": {

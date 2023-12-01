@@ -5,3 +5,4 @@ yarn.lock
 launch.json
 app.js
 generate_keys.js
+.vscode/*
