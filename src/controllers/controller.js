@@ -95,16 +95,18 @@ export async function transferNFT(req, res){
               await web3.eth.sendTransaction({from: OWNER_ADDRESS, to: NFT_CONTRACT_ADDRESS ,value: 0, gas: gas, gasPrice: gasPrice, data: encodeAbi})
                 .then(function(tx){
                     console.log("TX: ", tx);
-                    return res.status(200).send('transfer ok')
+                    return res.status(200).send(`sent to ${destWallet}`)
                 }
                 )
+
           } 
           catch(e){
-              console.log(e);
+              console.log(e)
+              return res.status(200).send(`something really bad happened when sending to ${destWallet}`);
           }
       } else {
           console.log(`Can't transfer. qtyOwner ${qtyOwner} destWallet ${destWallet} qtyDest ${qtyDest}`)
-          return res.status(200).send(`Can't transfer. qtyOwner ${qtyOwner} destWallet ${destWallet} qtyDest ${qtyDest}`)
+          return res.status(200).send(`Can't transfer. ${destWallet} already has the NFT`)
       }
 
 }
