@@ -98,12 +98,6 @@ export async function transferNFT(req, res){
                     return res.status(200).send('transfer ok')
                 }
                 )
-            //   await nftContract.methods
-            //   .safeTransferFrom(OWNER_ADDRESS, destWallet, TOKEN_ID, 1, encodeAbi)
-            //   .send({ from: OWNER_ADDRESS, gas: gas, gasPrice: gasPrice })
-            //   .then(function(tx){
-            //       console.log("TX: ", tx);
-            //   })
           } 
           catch(e){
               console.log(e);
