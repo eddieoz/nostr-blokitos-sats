@@ -7,6 +7,15 @@ import 'dotenv/config';
 import { sendMsg } from './sendMsg.js'
 import { zapArgs } from "../models/models.js";
 
+import Web3 from "web3";
+// import { HDWalletProvider } from "@truffle/hdwallet-provider";
+import HDWalletProvider from '@truffle/hdwallet-provider';
+// const { HDWalletProvider } = pkg;
+import { abi } from "../models/abi.js";
+// const Web3 = require('web3');
+// const HDWalletProvider = require("@truffle/hdwallet-provider");
+// const abi = require('../models/abi');
+
 globalThis.crypto = crypto;
 
 // from .env
@@ -14,6 +23,94 @@ const nostrWalletConnectUrl = process.env.NWC_URL;
 
 if (!nostrWalletConnectUrl) {
     throw new Error("Please set .env variables");
+}
+
+export async function transferNFT(req, res){
+    
+    const apiKey = String(req.query.apikey).trim();
+    const MNEMONIC = process.env.MNEMONIC;
+    const NODE_API_KEY = process.env.INFURA_KEY
+    const NFT_CONTRACT_ADDRESS = process.env.NFT_CONTRACT_ADDRESS;
+    // const OWNER_ADDRESS = process.env.OWNER_ADDRESS;
+    const NETWORK = process.env.NETWORK;
+    const TOKEN_ID = String(req.query.token_id).trim();
+    const destWallet = String(req.query.dest_wallet).trim();
+
+    const ADDRESS_INDEX = 0;
+
+    if (apiKey != process.env.API_KEY || ! apiKey){
+        return res.status(200).send('api key needed')
+    }
+
+    if (!destWallet) {
+        return res.status(200).send('no destination wallet')
+    }
+
+    if (!TOKEN_ID) {
+        return res.status(200).send('invalid token id')
+    }
+
+    if (!MNEMONIC || !NODE_API_KEY || !NETWORK) {
+        console.error(
+          "Please set a mnemonic, Alchemy/Infura key, owner, network, API key, nft contract, and factory contract address."
+        );
+        return;
+      }
+      
+      if (!NFT_CONTRACT_ADDRESS) {
+        console.error("Please either set a factory or NFT contract address.");
+        return;
+      }
+      
+      let provider = new HDWalletProvider({
+          mnemonic: MNEMONIC,
+          providerOrUrl: `https://${NETWORK}.infura.io/v3/${NODE_API_KEY}`,
+          addressIndex: ADDRESS_INDEX
+      });
+      const OWNER_ADDRESS = provider.getAddress(0);
+      console.log("OWNER_ADDRESS: ", OWNER_ADDRESS);
+      
+      var web3 = new Web3(provider);
+      
+      var nftContract = new web3.eth.Contract(abi().openseaAbi, NFT_CONTRACT_ADDRESS);
+
+      //   console.log(destWallet)
+      let qtyOwner = await nftContract.methods.balanceOf(OWNER_ADDRESS, TOKEN_ID).call()
+      let qtyDest = await nftContract.methods.balanceOf(destWallet, TOKEN_ID).call()
+      console.log(`Wallet ${OWNER_ADDRESS} qty ${qtyOwner}`)
+      console.log(`Wallet ${destWallet} qty ${qtyDest}`)
+      
+      if (qtyOwner > 0 && qtyDest == 0){
+          try{
+              //let nftMessage = web3.utils.hexToBytes('0x01');;
+              let gasPrice = await web3.eth.getGasPrice();
+              let gas = await nftContract.methods
+              .safeTransferFrom(OWNER_ADDRESS, destWallet, TOKEN_ID, 1, [])
+              .estimateGas({ from: OWNER_ADDRESS });
+
+              var encodeAbi = await nftContract.methods
+              .safeTransferFrom(OWNER_ADDRESS, destWallet, TOKEN_ID, 1, [])
+              .encodeABI({ from: OWNER_ADDRESS })
+              
+              await web3.eth.sendTransaction({from: OWNER_ADDRESS, to: NFT_CONTRACT_ADDRESS ,value: 0, gas: gas, gasPrice: gasPrice, data: encodeAbi})
+                .then(function(tx){
+                    console.log("TX: ", tx);
+                }
+                )
+            //   await nftContract.methods
+            //   .safeTransferFrom(OWNER_ADDRESS, destWallet, TOKEN_ID, 1, encodeAbi)
+            //   .send({ from: OWNER_ADDRESS, gas: gas, gasPrice: gasPrice })
+            //   .then(function(tx){
+            //       console.log("TX: ", tx);
+            //   })
+          } 
+          catch(e){
+              console.log(e);
+          }
+      } else {
+          console.log(`Can't transfer. qtyOwner ${qtyOwner} destWallet ${destWallet} qtyDest ${qtyDest}`)
+      }
+
 }
 
 // transfer sats to nostr pubkey
