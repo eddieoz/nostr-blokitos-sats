@@ -25,92 +25,84 @@ if (!nostrWalletConnectUrl) {
     throw new Error("Please set .env variables");
 }
 
-export async function transferNFT(req, res){
-    
+export async function transferNFT(req, res) {
     const apiKey = String(req.query.apikey).trim();
     const MNEMONIC = process.env.MNEMONIC;
-    const NODE_API_KEY = process.env.INFURA_KEY
+    const NODE_API_KEY = process.env.INFURA_KEY;
     const NFT_CONTRACT_ADDRESS = process.env.NFT_CONTRACT_ADDRESS;
-    // const OWNER_ADDRESS = process.env.OWNER_ADDRESS;
     const NETWORK = process.env.NETWORK;
     const TOKEN_ID = String(req.query.token_id).trim();
     const destWallet = String(req.query.dest_wallet).trim();
 
     const ADDRESS_INDEX = 0;
 
-    if (apiKey != process.env.API_KEY || ! apiKey){
-        return res.status(200).send('api key needed')
+    if (apiKey != process.env.API_KEY || !apiKey) {
+        return res.status(200).send('api key needed');
     }
 
     if (!destWallet) {
-        return res.status(200).send('no destination wallet')
+        return res.status(200).send('no destination wallet');
     }
 
     if (!TOKEN_ID) {
-        return res.status(200).send('invalid token id')
+        return res.status(200).send('invalid token id');
     }
 
     if (!MNEMONIC || !NODE_API_KEY || !NETWORK) {
-        console.error(
-          "Please set a mnemonic, Alchemy/Infura key, owner, network, API key, nft contract, and factory contract address."
-        );
+        console.error("Please set a mnemonic, Alchemy/Infura key, owner, network, API key, nft contract, and factory contract address.");
         return;
-      }
-      
-      if (!NFT_CONTRACT_ADDRESS) {
+    }
+
+    if (!NFT_CONTRACT_ADDRESS) {
         console.error("Please either set a factory or NFT contract address.");
         return;
-      }
-      
-      let provider = new HDWalletProvider({
-          mnemonic: MNEMONIC,
-          providerOrUrl: `https://${NETWORK}.infura.io/v3/${NODE_API_KEY}`,
-          addressIndex: ADDRESS_INDEX
-      });
-      const OWNER_ADDRESS = provider.getAddress(0);
-      console.log("OWNER_ADDRESS: ", OWNER_ADDRESS);
-      
-      var web3 = new Web3(provider);
-      
-      var nftContract = new web3.eth.Contract(abi().openseaAbi, NFT_CONTRACT_ADDRESS);
+    }
 
-      //   console.log(destWallet)
-      let qtyOwner = await nftContract.methods.balanceOf(OWNER_ADDRESS, TOKEN_ID).call()
-      let qtyDest = await nftContract.methods.balanceOf(destWallet, TOKEN_ID).call()
-      console.log(`Wallet ${OWNER_ADDRESS} qty ${qtyOwner}`)
-      console.log(`Wallet ${destWallet} qty ${qtyDest}`)
-      
-      if (qtyOwner > 0 && qtyDest == 0){
-          try{
-              //let nftMessage = web3.utils.hexToBytes('0x01');;
-              let gasPrice = await web3.eth.getGasPrice();
-              let gas = await nftContract.methods
-              .safeTransferFrom(OWNER_ADDRESS, destWallet, TOKEN_ID, 1, [])
-              .estimateGas({ from: OWNER_ADDRESS });
+    let provider = new HDWalletProvider({
+        mnemonic: MNEMONIC,
+        providerOrUrl: `https://${NETWORK}.infura.io/v3/${NODE_API_KEY}`,
+        addressIndex: ADDRESS_INDEX
+    });
+    const OWNER_ADDRESS = provider.getAddress(0);
+    console.log("OWNER_ADDRESS: ", OWNER_ADDRESS);
 
-              var encodeAbi = await nftContract.methods
-              .safeTransferFrom(OWNER_ADDRESS, destWallet, TOKEN_ID, 1, [])
-              .encodeABI({ from: OWNER_ADDRESS })
-              
-              await web3.eth.sendTransaction({from: OWNER_ADDRESS, to: NFT_CONTRACT_ADDRESS ,value: 0, gas: gas, gasPrice: gasPrice, data: encodeAbi})
-                .then(function(tx){
+    var web3 = new Web3(provider);
+    var nftContract = new web3.eth.Contract(abi().openseaAbi, NFT_CONTRACT_ADDRESS);
+
+    try {
+        let qtyOwner = await nftContract.methods.balanceOf(OWNER_ADDRESS, TOKEN_ID).call();
+        let qtyDest = await nftContract.methods.balanceOf(destWallet, TOKEN_ID).call();
+        console.log(`Wallet ${OWNER_ADDRESS} qty ${qtyOwner}`);
+        console.log(`Wallet ${destWallet} qty ${qtyDest}`);
+
+        if (qtyOwner > 0 && qtyDest == 0) {
+            let gasPrice = await web3.eth.getGasPrice();
+            let gas = await nftContract.methods
+                .safeTransferFrom(OWNER_ADDRESS, destWallet, TOKEN_ID, 1, [])
+                .estimateGas({ from: OWNER_ADDRESS });
+
+            var encodeAbi = await nftContract.methods
+                .safeTransferFrom(OWNER_ADDRESS, destWallet, TOKEN_ID, 1, [])
+                .encodeABI({ from: OWNER_ADDRESS });
+
+            await web3.eth.sendTransaction({ from: OWNER_ADDRESS, to: NFT_CONTRACT_ADDRESS, value: 0, gas: gas, gasPrice: gasPrice, data: encodeAbi })
+                .then(function (tx) {
                     console.log("TX: ", tx);
-                    return res.status(200).send(`sent to ${destWallet}`)
-                }
-                )
+                    return res.status(200).send(`sent to ${destWallet}`);
+                });
 
-          } 
-          catch(e){
-              console.log(e)
-              return res.status(200).send(`something really bad happened when sending to ${destWallet}`);
-          }
-      } else {
-          console.log(`Can't transfer. qtyOwner ${qtyOwner} destWallet ${destWallet} qtyDest ${qtyDest}`)
-          return res.status(200).send(`Can't transfer. ${destWallet} already has the NFT`)
-      }
-
+        } else {
+            console.log(`Can't transfer. qtyOwner ${qtyOwner} destWallet ${destWallet} qtyDest ${qtyDest}`);
+            return res.status(200).send(`Can't transfer. ${destWallet} already has the NFT`);
+        }
+    } catch (e) {
+        console.log(e);
+        return res.status(200).send(`something really bad happened when sending to ${destWallet}`);
+    } finally {
+        // Ensure provider is stopped to prevent continuous polling
+        provider.engine.stop();
+    }
 }
-
 // transfer sats to nostr pubkey
 export async function zapNostr(req, res) {
 
