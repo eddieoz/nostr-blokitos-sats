@@ -1,0 +1,9 @@
+{
+    "apps": [
+        {
+            "name": "nostr-blokitos-sats-nfts",
+            "script": "pnpm",
+            "args": ["--color", "start"]
+        }
+    ]
+}
